@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SNET — Disaster Knowledge Assistant</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #1c2330;
+      --border: #30363d;
+      --accent: #e8865a;
+      --accent2: #c96f3e;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --user-bg: #1f3a5f;
+      --bot-bg: #1c2330;
+      --radius: 14px;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 28px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .logo {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 600;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .header-text h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .header-text p {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 300;
+      margin-top: 2px;
+    }
+
+    .status {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      background: #3fb950;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Chat area */
+    #chat-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      scroll-behavior: smooth;
+    }
+
+    #chat-area::-webkit-scrollbar { width: 4px; }
+    #chat-area::-webkit-scrollbar-track { background: transparent; }
+    #chat-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* Welcome */
+    .welcome {
+      text-align: center;
+      padding: 40px 20px;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .welcome h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    .welcome p {
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 300;
+      max-width: 440px;
+      margin: 0 auto 28px;
+      line-height: 1.7;
+    }
+
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .suggestion-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: all 0.2s;
+    }
+
+    .suggestion-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(232,134,90,0.08);
+    }
+
+    /* Messages */
+    .message {
+      display: flex;
+      gap: 12px;
+      max-width: 820px;
+      margin: 0 auto;
+      width: 100%;
+      animation: fadeUp 0.3s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user { flex-direction: row-reverse; }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 500;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .avatar.user-av {
+      background: var(--user-bg);
+      color: #79b8ff;
+    }
+
+    .avatar.bot-av {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: white;
+      font-family: 'Playfair Display', serif;
+    }
+
+    .bubble {
+      padding: 14px 18px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      line-height: 1.75;
+      max-width: calc(100% - 50px);
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .message.user .bubble {
+      background: var(--user-bg);
+      color: var(--text);
+      border-bottom-right-radius: 4px;
+    }
+
+    .message.bot .bubble {
+      background: var(--bot-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-bottom-left-radius: 4px;
+    }
+
+    /* Typing indicator */
+    .typing .bubble {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      padding: 16px 18px;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      animation: bounce 1.2s infinite;
+    }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-6px); }
+    }
+
+    /* Input area */
+    .input-area {
+      padding: 16px 20px 20px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .input-wrapper {
+      max-width: 820px;
+      margin: 0 auto;
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      transition: border-color 0.2s;
+    }
+
+    .input-wrapper:focus-within {
+      border-color: var(--accent);
+    }
+
+    textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 300;
+      resize: none;
+      max-height: 120px;
+      min-height: 24px;
+      line-height: 1.6;
+    }
+
+    textarea::placeholder { color: var(--text-muted); }
+
+    #send-btn {
+      width: 36px;
+      height: 36px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    #send-btn:hover { background: var(--accent2); }
+    #send-btn:active { transform: scale(0.95); }
+    #send-btn:disabled { background: var(--border); cursor: not-allowed; }
+
+    #send-btn svg { width: 16px; height: 16px; fill: white; }
+
+    .input-hint {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 8px;
+      max-width: 820px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">S</div>
+    <div class="header-text">
+      <h1>SNET Knowledge Assistant</h1>
+      <p>South Asia Disaster Risk Reduction Archive</p>
+    </div>
+    <div class="status">
+      <div class="status-dot"></div>
+      Online
+    </div>
+  </header>
+
+  <div id="chat-area">
+    <div class="welcome" id="welcome">
+      <h2>Ask the Archive</h2>
+      <p>Search through 2,511 articles on disaster risk, climate change, and development research across South Asia.</p>
+      <div class="suggestions">
+        <button class="suggestion-btn" onclick="useSuggestion(this)">What are the impacts of heatwaves in India?</button>
+        <button class="suggestion-btn" onclick="useSuggestion(this)">Explain community-based disaster management</button>
+        <button class="suggestion-btn" onclick="useSuggestion(this)">List articles on floods in Bihar</button>
+        <button class="suggestion-btn" onclick="useSuggestion(this)">What is microinsurance in disaster risk?</button>
+        <button class="suggestion-btn" onclick="useSuggestion(this)">How do early warning systems work?</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <div class="input-wrapper">
+      <textarea id="userInput" placeholder="Ask a question or search for articles..." rows="1"></textarea>
+      <button id="send-btn" onclick="sendMessage()">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+        </svg>
+      </button>
+    </div>
+    <p class="input-hint">Press Enter to send · Shift+Enter for new line</p>
+  </div>
+
+  <script>
+    const API_URL = "https://aria-superanimal-barney.ngrok-free.dev/v1/chat-messages";
+    const API_KEY = "Bearer app-Q5ndtfpZHN0AoahsOXZDW6Z6";
+
+    const chatArea = document.getElementById("chat-area");
+    const input = document.getElementById("userInput");
+    const sendBtn = document.getElementById("send-btn");
+    let isLoading = false;
+
+    // Auto-resize textarea
+    input.addEventListener("input", () => {
+      input.style.height = "auto";
+      input.style.height = Math.min(input.scrollHeight, 120) + "px";
+    });
+
+    // Enter to send
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    function useSuggestion(btn) {
+      input.value = btn.textContent;
+      input.focus();
+      sendMessage();
+    }
+
+    function addMessage(text, type) {
+      const welcome = document.getElementById("welcome");
+      if (welcome) welcome.remove();
+
+      const msg = document.createElement("div");
+      msg.className = `message ${type}`;
+
+      const avatar = document.createElement("div");
+      avatar.className = `avatar ${type === "user" ? "user-av" : "bot-av"}`;
+      avatar.textContent = type === "user" ? "U" : "S";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.innerHTML = marked.parse(text);
+
+      msg.appendChild(avatar);
+      msg.appendChild(bubble);
+      chatArea.appendChild(msg);
+      chatArea.scrollTop = chatArea.scrollHeight;
+      return bubble;
+    }
+
+    function addTyping() {
+      const welcome = document.getElementById("welcome");
+      if (welcome) welcome.remove();
+
+      const msg = document.createElement("div");
+      msg.className = "message bot typing";
+      msg.id = "typing";
+
+      const avatar = document.createElement("div");
+      avatar.className = "avatar bot-av";
+      avatar.textContent = "S";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+
+      msg.appendChild(avatar);
+      msg.appendChild(bubble);
+      chatArea.appendChild(msg);
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    function removeTyping() {
+      const t = document.getElementById("typing");
+      if (t) t.remove();
+    }
+
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (!text || isLoading) return;
+
+      isLoading = true;
+      sendBtn.disabled = true;
+      input.value = "";
+      input.style.height = "auto";
+
+      addMessage(text, "user");
+      addTyping();
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+            "Authorization": API_KEY,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            inputs: {},
+            query: text,
+            response_mode: "blocking",
+            user: "user-123"
+          })
+        });
+
+        const data = await res.json();
+        removeTyping();
+        addMessage(data.answer || "I could not find the exact information in the current knowledge base.", "bot");
+
+      } catch (err) {
+        removeTyping();
+        addMessage("Connection error. Please check the server and try again.", "bot");
+      }
+
+      isLoading = false;
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  </script>
+</body>
+</html>
